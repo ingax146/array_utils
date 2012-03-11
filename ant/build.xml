@@ -1,0 +1,145 @@
+<project name="BOF_module" default="all" basedir=".">
+	<!--
+		This ant script can be used to develop BOF modules in a simple composer
+		environment. This build script is using some conventions that must be
+		followed in order for this script to work.
+
+		Project requirements
+		1.  Composer workspace JRE must be used (this is required for emc.build
+			task to work properly.
+		2.  It must be executed from within Composer.
+		3. 	Workspace project must be named with the same name as the output jar/dar file
+		4.  Implementation classes must be in a package below **.impl, that is the jar
+			task is fetching everything except **/impl/** for the interface jar, and
+			**/impl/**/*.class for the implementation.
+
+		USAGE:
+			1.  Create Composer project and copy this script into ${project.home.dir}/ant
+				folder.
+			2.  Compile the JAR files. Run 'jar' task.
+			3.  Create Documentum JarDef artifacts for both jar files.
+			4.  Create Documentum Module artifact for the BOF module.
+			5.  Update interface.content.dir and implementation.content.dir properties.
+				(either by updating the build.xml, or by setting the value in build.properties)
+			6. 	Build everything. Run 'all' task.
+
+			Resulting DAR file can be found in the ${project.home.dir}/build/deploy folder
+			together with an installation parameter file, and both the JAR files which are
+			used to define the module logic. The JAR files are not needed for distribution, but
+			they are included in the deploy folder for references only.
+	-->
+	<property file="build.properties" />
+	<property name="generated.home" value="../build"/>
+	<property name="build.home" value="${generated.home}/temp" />
+	<property name="deploy.home" value="${generated.home}/deploy" />
+	<property name="src.home" value="../src" />
+
+	<property name="compile.source" value="1.5" />
+	<property name="compile.target" value="1.5" />
+	<property name="compile.debug" value="false" />
+	<property name="compile.deprecation" value="false" />
+	<property name="compile.optimize" value="true" />
+
+	<!--
+		Point these properties to the sharde dfc library to compile against.
+	-->
+	<property name="dfc.library" value="D:/70_libs/20_documentum"/>
+	<property name="dfc.jar" value="dfc-6.7.jar"/>
+
+	<!--
+		Project name must be equal to the Composer project for the current
+		BOF module.
+	-->
+	<property name="project.name" value="log_module"/>
+
+	<!--
+		Jar files generated will be given the name of the project followed by
+		"" for interfaces, and "Impl" for implementation jar files.
+	-->
+	<property name="interface.filename" value="${project.name}.jar"/>
+	<property name="implementation.filename" value="${project.name}Impl.jar"/>
+	<property name="javadoc.filename" value="${project.name}_javadoc.zip"/>
+	<!--
+		Either point these properties to the content path for each jar file, or
+		change the jardef artifacts to point to a specific JAR folder. The later
+		is probably a more stable way to work with composer, but unless you create
+		the jardefs from scratch the content directories will be the same.
+	-->
+	<property name="interface.content.dir" value="../content/62/810497062"/>
+	<property name="implementation.content.dir" value="../content/08/-811787608"/>
+	<property name="javadoc.content.dir" value="../content/19/156816619"/>
+
+	<path id="compile.classpath">
+		<fileset dir="${dfc.library}" includes="${dfc.jar}"/>
+	</path>
+
+	<target name="clean">
+		<delete dir="${generated.home}"/>
+	</target>
+
+	<target name="init" depends="clean">
+		<mkdir dir="${deploy.home}"/>
+	</target>
+
+	<target name="compile" depends="init">
+		<mkdir dir="${build.home}" />
+		<javac srcdir="${src.home}"
+			destdir="${build.home}"
+			target="${compile.target}"
+			source="${compile.source}"
+			debug="${compile.debug}"
+			deprecation="${compile.deprecation}"
+			optimize="${compile.optimize}"
+			includeantruntime="false">
+			<classpath refid="compile.classpath" />
+		</javac>
+		<!-- Copy resources -->
+		<copy todir="${build.home}">
+			<fileset dir="${src.home}" includes="**/*.properties"/>
+		</copy>
+	</target>
+
+	<target name="jar" depends="init,compile">
+		<jar jarfile="${deploy.home}/${implementation.filename}">
+			<fileset dir="${build.home}"
+					 includes="**/impl/**/*.class"/>
+		</jar>
+
+		<jar jarfile="${deploy.home}/${interface.filename}">
+			<fileset dir="${build.home}" includes="**/*.class" excludes="**/impl/**"/>
+		</jar>
+	</target>
+
+	<target name="doc" depends="init,compile">
+		<property name="javadoc.home" value="${build.home}/javadoc"/>
+		<javadoc executable="C:/Program Files/Java/jdk1.6.0_29/bin/javadoc.exe"
+			sourcepath="${src.home}" destdir="${javadoc.home}/api"/>
+
+		<zip destfile="${deploy.home}/${javadoc.filename}">
+					<fileset dir="${javadoc.home}" includes="**"/>
+		</zip>
+	</target>
+
+	<target name="pre.dar" depends="jar,doc">
+		<copy todir="${interface.content.dir}">
+			<fileset dir="${deploy.home}" includes="${interface.filename}"/>
+		</copy>
+
+		<copy todir="${implementation.content.dir}">
+			<fileset dir="${deploy.home}" includes="${implementation.filename}"/>
+		</copy>
+		<copy todir="${javadoc.content.dir}">
+			<fileset dir="${deploy.home}" includes="${javadoc.filename}"/>
+		</copy>
+	</target>
+
+	<target name="dar" depends="jar,pre.dar">
+		<emc.build dmproject="${project.name}"/>
+		<copy todir="${deploy.home}">
+			<fileset dir="../bin-dar" includes="**"/>
+		</copy>
+	</target>
+
+	<target name="all" depends="dar"/>
+
+</project>
