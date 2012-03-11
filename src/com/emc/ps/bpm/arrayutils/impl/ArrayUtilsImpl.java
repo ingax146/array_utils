@@ -1,10 +1,13 @@
-package com.emc.ps.bpm.arrayutils;
+package com.emc.ps.bpm.arrayutils.impl;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.documentum.fc.client.DfSingleDocbaseModule;
 import com.documentum.fc.common.DfException;
+import com.emc.ps.bpm.arrayutils.ArrayUtils;
+import com.emc.ps.bpm.arrayutils.Arrays;
+import com.emc.ps.bpm.arrayutils.Options;
 
 public class ArrayUtilsImpl extends DfSingleDocbaseModule implements ArrayUtils {
 
